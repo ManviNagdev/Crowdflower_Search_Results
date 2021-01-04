@@ -5,6 +5,7 @@ import nltk
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from nltk.stem import WordNetLemmatizer
+from nltk.corpus import wordnet
 
 nltk.download("punkt")
 nltk.download("wordnet")
@@ -14,6 +15,7 @@ wordnet_lemmatizer = WordNetLemmatizer()
 
 def unzip(filepath, extract_to):
     """
+    Unzips a file at filepath and extracts all the contents to the extract_to directory
     filepath: path to the file to unzip
     extract_to: directory/path to unzip the files at
     """
@@ -23,6 +25,7 @@ def unzip(filepath, extract_to):
 
 def list_files(directory=".", extension=""):
     """
+    Returns list of all files ending with extension in directory
     input: directory path, file extension
     output: list of files in the directory with the file extension
     """
@@ -32,6 +35,7 @@ def list_files(directory=".", extension=""):
 
 def unzip_files(path=".", extract_to=None, files_to_unzip=[], keep_zips=False):
     """
+    Unzips all files_to_unzip at path to extract_to directory
     path: path to zip files
     extract_to: directory/path to unzip the files at (if None, extracts to `path`)
     files_to_unzip: list of files to unzip
@@ -62,42 +66,58 @@ def unzip_files(path=".", extract_to=None, files_to_unzip=[], keep_zips=False):
 
 def html2text(html_text):
     """
+    Returns text after removing html formatting tags
     html_text: text along with HTML formatting tags
     """
-    soup = BeautifulSoup(html_text, "html.parser")
-    return soup.get_text()
+    return BeautifulSoup(html_text, "html.parser").get_text()
 
 
 def remove_stopwords_without_tokenize(text):
     """
+    Returns text after removing stopwords without tokenization
     text: string from which stopwords are to be removed
     """
-    text_without_sw = [
-        word for word in text.split(" ") if not word in stopwords.words("english")
-    ]
-    return (" ").join(text_without_sw)
+    return (" ").join(
+        [word for word in text.split(" ") if not word in stopwords.words("english")]
+    )
 
 
 def remove_stopwords_with_tokenize(text):
     """
+    Returns text after removing stopwords with tokenization
     text: string from which stopwords are to be removed
     """
-    text_tokens = word_tokenize(text)
-    text_without_sw = [
-        word for word in text_tokens if not word in stopwords.words("english")
-    ]
-    return (" ").join(text_without_sw)
+    return (" ").join(
+        [word for word in word_tokenize(text) if not word in stopwords.words("english")]
+    )
+
+
+def get_wordnet_pos(word):
+    """
+    Maps POS tag to the first character lemmatize() accepts
+    word: word for which POS tag is to be assigned
+    """
+    tag = nltk.pos_tag([word])[0][1][0].upper()
+    tag_dict = {
+        "J": wordnet.ADJ,
+        "N": wordnet.NOUN,
+        "V": wordnet.VERB,
+        "R": wordnet.ADV,
+    }
+
+    return tag_dict.get(tag, wordnet.NOUN)
 
 
 def lemmatize(text):
     """
+    Returns lemmatized text
     text: string to be lemmatized
     """
-    punctuations = "?:!.,;"
-    text_tokens = word_tokenize(text)
-    lemmatized_text = [
-        wordnet_lemmatizer.lemmatize(word, pos="v")
-        for word in text_tokens
-        if not word in punctuations
-    ]
-    return (" ").join(lemmatized_text)
+    punctuations = "!\"#$%&'()*+, -./:;<=>?@[\]^_`{|}~"
+    return (" ").join(
+        [
+            wordnet_lemmatizer.lemmatize(w, get_wordnet_pos(w))
+            for w in word_tokenize(text)
+            if w not in punctuations
+        ]
+    )
