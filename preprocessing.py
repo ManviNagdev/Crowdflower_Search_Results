@@ -67,5 +67,12 @@ if __name__ == "__main__":
             )
         test.to_csv("preprocessed_data/test_lemmatized.csv")
 
+    # drop NaN values
+    train.dropna(inplace=True)
+    test.dropna(inplace=True)
+
     # create bag of words
     utils.bag_of_words(train["product_description"], test=test["product_description"])
+
+    # create tfidf
+    utils.tf_idf(train["product_description"], test=test["product_description"])

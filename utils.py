@@ -8,7 +8,7 @@ from nltk.corpus import stopwords, wordnet
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
 from pandas import DataFrame
-from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 
 nltk_download("punkt")
 nltk_download("wordnet")
@@ -142,4 +142,22 @@ def bag_of_words(train, test=None):
     test_bow = vectorizer.transform(test)
     DataFrame(test_bow.toarray(), columns=vectorizer.get_feature_names()).to_csv(
         "preprocessed_data/test_bow.csv"
+    )
+
+
+def tf_idf(train, test=None):
+    """
+    Converts train file into matrix of TF-IDF features and transforms test file into document-term matrix
+    train: List of training sentences to be used to form vocabulary and then transformed
+    test: List of testing sentences to be tranformed
+    """
+    vectorizer = TfidfVectorizer()
+    train_tfidf = vectorizer.fit_transform(train)
+    DataFrame(train_tfidf.toarray(), columns=vectorizer.get_feature_names()).to_csv(
+        "preprocessed_data/train_tfidf.csv"
+    )
+
+    test_tfidf = vectorizer.transform(test)
+    DataFrame(test_tfidf.toarray(), columns=vectorizer.get_feature_names()).to_csv(
+        "preprocessed_data/test_tfidf.csv"
     )
