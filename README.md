@@ -5,7 +5,7 @@ Crowdflower Search Results Relevance is a Kaggle Competition - https://www.kaggl
 ## Dataset
 The dataset is taken from https://www.kaggle.com/c/crowdflower-search-relevance/data.
 
-## Packages
+## Packages Required
 1. pandas==1.1.3
 2. tqdm==4.50.2
 3. nltk==3.5
