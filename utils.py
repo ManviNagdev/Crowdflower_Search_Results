@@ -1,15 +1,15 @@
-import zipfile
 import os
-from bs4 import BeautifulSoup
-import nltk
-from nltk.corpus import stopwords
-from nltk.tokenize import word_tokenize
-from nltk.stem import WordNetLemmatizer
-from nltk.corpus import wordnet
+from zipfile import ZipFile
 
-nltk.download("punkt")
-nltk.download("wordnet")
-nltk.download("stopwords")
+from bs4 import BeautifulSoup
+from nltk import download as nltk_download
+from nltk.corpus import stopwords, wordnet
+from nltk.stem import WordNetLemmatizer
+from nltk.tokenize import word_tokenize
+
+nltk_download("punkt")
+nltk_download("wordnet")
+nltk_download("stopwords")
 wordnet_lemmatizer = WordNetLemmatizer()
 
 
@@ -19,7 +19,7 @@ def unzip(filepath, extract_to):
     filepath: path to the file to unzip
     extract_to: directory/path to unzip the files at
     """
-    with zipfile.ZipFile(filepath, "r") as zip_ref:
+    with ZipFile(filepath, "r") as zip_ref:
         zip_ref.extractall(extract_to)
 
 

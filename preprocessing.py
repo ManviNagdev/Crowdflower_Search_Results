@@ -1,37 +1,36 @@
-import utils
-from os import path, listdir, walk
-import sys
-import pandas as pd
-from tqdm import tqdm
 import getopt
+import sys
+
+from pandas import read_csv
+from tqdm import tqdm
+
+import utils
 
 if __name__ == "__main__":
     """
     input: --lemmatize=, filepath, extract_path (if not extract_here)
     """
     options, remainder = getopt.getopt(sys.argv[1:], "o:v", ["lemmatize="])
-    # print("OPTIONS   :", options)
-    lem = False
+    lemmatize = False
     for opt, arg in options:
         if opt in ("-l", "--lemmatize"):
-            lem = arg
+            lemmatize = arg
     filepath = remainder[0]
-    # print(filepath)
+
     try:
         extract_path = remainder[1]
     except:
         extract_path = None
+
     utils.unzip_files(
         path=filepath,
         extract_to=extract_path,
         files_to_unzip=utils.list_files(directory=filepath, extension=".zip"),
     )
-    # print(extract_path)
-    # print("OUTPUT    :", lem)
-    # print("REMAINING :", remainder)
+
     # load dataset
-    train = pd.read_csv("D:/Machine Learning/Crowdflower_Search_Results/data/train.csv")
-    test = pd.read_csv("D:/Machine Learning/Crowdflower_Search_Results/data/test.csv")
+    train = read_csv("data/train.csv")
+    test = read_csv("data/test.csv")
 
     # drop NaN values
     train.dropna(inplace=True)
@@ -46,30 +45,22 @@ if __name__ == "__main__":
         train.loc[i, "product_description"] = utils.remove_stopwords_without_tokenize(
             row["product_description"]
         )
-    train.to_csv(
-        "D:/Machine Learning/Crowdflower_Search_Results/preprocessed_data/train_removed_stopwords.csv"
-    )
     for i, row in tqdm(test.iterrows()):
         test.loc[i, "product_description"] = utils.remove_stopwords_without_tokenize(
             row["product_description"]
         )
-    test.to_csv(
-        "D:/Machine Learning/Crowdflower_Search_Results/preprocessed_data/test_removed_stopwords.csv"
-    )
+    train.to_csv("preprocessed_data/train_removed_stopwords.csv")
+    test.to_csv("preprocessed_data/test_removed_stopwords.csv")
 
     # lemmatize
-    if lem == "True":
+    if lemmatize == "True":
         for i, row in tqdm(train.iterrows()):
             train.loc[i, "product_description"] = utils.lemmatize(
                 row["product_description"]
             )
-        train.to_csv(
-            "D:/Machine Learning/Crowdflower_Search_Results/preprocessed_data/train_lemmatized.csv"
-        )
         for i, row in tqdm(test.iterrows()):
             test.loc[i, "product_description"] = utils.lemmatize(
                 row["product_description"]
             )
-        test.to_csv(
-            "D:/Machine Learning/Crowdflower_Search_Results/preprocessed_data/test_lemmatized.csv"
-        )
+        train.to_csv("preprocessed_data/train_lemmatized.csv")
+        test.to_csv("preprocessed_data/test_lemmatized.csv")
