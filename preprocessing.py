@@ -45,11 +45,12 @@ if __name__ == "__main__":
         train.loc[i, "product_description"] = utils.remove_stopwords_without_tokenize(
             row["product_description"]
         )
+    train.to_csv("preprocessed_data/train_removed_stopwords.csv")
+
     for i, row in tqdm(test.iterrows()):
         test.loc[i, "product_description"] = utils.remove_stopwords_without_tokenize(
             row["product_description"]
         )
-    train.to_csv("preprocessed_data/train_removed_stopwords.csv")
     test.to_csv("preprocessed_data/test_removed_stopwords.csv")
 
     # lemmatize
@@ -58,9 +59,13 @@ if __name__ == "__main__":
             train.loc[i, "product_description"] = utils.lemmatize(
                 row["product_description"]
             )
+        train.to_csv("preprocessed_data/train_lemmatized.csv")
+
         for i, row in tqdm(test.iterrows()):
             test.loc[i, "product_description"] = utils.lemmatize(
                 row["product_description"]
             )
-        train.to_csv("preprocessed_data/train_lemmatized.csv")
         test.to_csv("preprocessed_data/test_lemmatized.csv")
+
+    # create bag of words
+    utils.bag_of_words(train["product_description"], test=test["product_description"])

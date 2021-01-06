@@ -3,13 +3,17 @@ from zipfile import ZipFile
 
 from bs4 import BeautifulSoup
 from nltk import download as nltk_download
+from nltk import pos_tag as nltk_pos_tag
 from nltk.corpus import stopwords, wordnet
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
+from pandas import DataFrame
+from sklearn.feature_extraction.text import CountVectorizer
 
 nltk_download("punkt")
 nltk_download("wordnet")
 nltk_download("stopwords")
+nltk_download("averaged_perceptron_tagger")
 wordnet_lemmatizer = WordNetLemmatizer()
 
 
@@ -69,7 +73,7 @@ def html2text(html_text):
     Returns text after removing html formatting tags
     html_text: text along with HTML formatting tags
     """
-    return BeautifulSoup(html_text, "html.parser").get_text()
+    return BeautifulSoup(html_text, "html.parser", store_line_numbers=False).get_text()
 
 
 def remove_stopwords_without_tokenize(text):
@@ -97,7 +101,7 @@ def get_wordnet_pos(word):
     Maps POS tag to the first character lemmatize() accepts
     word: word for which POS tag is to be assigned
     """
-    tag = nltk.pos_tag([word])[0][1][0].upper()
+    tag = nltk_pos_tag([word])[0][1][0].upper()
     tag_dict = {
         "J": wordnet.ADJ,
         "N": wordnet.NOUN,
@@ -120,4 +124,22 @@ def lemmatize(text):
             for w in word_tokenize(text)
             if w not in punctuations
         ]
+    )
+
+
+def bag_of_words(train, test=None):
+    """
+    Converts train file into matrix of token counts and transforms test file into document-term matrix
+    train: List of training sentences to be used to form vocabulary and then transformed
+    test: List of testing sentences to be tranformed
+    """
+    vectorizer = CountVectorizer()
+    train_bow = vectorizer.fit_transform(train)
+    DataFrame(train_bow.toarray(), columns=vectorizer.get_feature_names()).to_csv(
+        "preprocessed_data/train_bow.csv"
+    )
+
+    test_bow = vectorizer.transform(test)
+    DataFrame(test_bow.toarray(), columns=vectorizer.get_feature_names()).to_csv(
+        "preprocessed_data/test_bow.csv"
     )
