@@ -36,6 +36,15 @@ if __name__ == "__main__":
     train.dropna(inplace=True)
     test.dropna(inplace=True)
 
+    # convert to lowercase
+    train["product_description"] = train["product_description"].str.lower()
+    train["product_title"] = train["product_title"].str.lower()
+    train["query"] = train["query"].str.lower()
+
+    test["product_description"] = test["product_description"].str.lower()
+    test["product_title"] = test["product_title"].str.lower()
+    test["query"] = test["query"].str.lower()
+
     # convert html text to normal text
     train["product_description"] = train["product_description"].apply(utils.html2text)
     test["product_description"] = test["product_description"].apply(utils.html2text)
@@ -45,13 +54,14 @@ if __name__ == "__main__":
         train.loc[i, "product_description"] = utils.remove_stopwords_without_tokenize(
             row["product_description"]
         )
-    train.to_csv("preprocessed_data/train_removed_stopwords.csv")
+    train.to_csv("preprocessed_data/train_removed_stopwords.csv", sep="\t")
 
     for i, row in tqdm(test.iterrows()):
         test.loc[i, "product_description"] = utils.remove_stopwords_without_tokenize(
             row["product_description"]
         )
-    test.to_csv("preprocessed_data/test_removed_stopwords.csv")
+    test.to_csv("preprocessed_data/test_removed_stopwords.csv", sep="\t")
+    print("Stopwords Removal done")
 
     # lemmatize
     if lemmatize == "True":
@@ -59,13 +69,14 @@ if __name__ == "__main__":
             train.loc[i, "product_description"] = utils.lemmatize(
                 row["product_description"]
             )
-        train.to_csv("preprocessed_data/train_lemmatized.csv")
+        train.to_csv("preprocessed_data/train_lemmatized.csv", sep="\t")
 
         for i, row in tqdm(test.iterrows()):
             test.loc[i, "product_description"] = utils.lemmatize(
                 row["product_description"]
             )
-        test.to_csv("preprocessed_data/test_lemmatized.csv")
+        test.to_csv("preprocessed_data/test_lemmatized.csv", sep="\t")
+    print("Lemmatization done")
 
     # drop NaN values
     train.dropna(inplace=True)
@@ -73,6 +84,12 @@ if __name__ == "__main__":
 
     # create bag of words
     utils.bag_of_words(train["product_description"], test=test["product_description"])
+    print("BOW done")
 
     # create tfidf
     utils.tf_idf(train["product_description"], test=test["product_description"])
+    print("TFIDF done")
+
+    # create word2vec
+    utils.word_vector(train["product_description"])
+    print("Word2Vec done")

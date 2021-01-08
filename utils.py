@@ -2,6 +2,7 @@ import os
 from zipfile import ZipFile
 
 from bs4 import BeautifulSoup
+from gensim.models import Word2Vec
 from nltk import download as nltk_download
 from nltk import pos_tag as nltk_pos_tag
 from nltk.corpus import stopwords, wordnet
@@ -136,12 +137,12 @@ def bag_of_words(train, test=None):
     vectorizer = CountVectorizer()
     train_bow = vectorizer.fit_transform(train)
     DataFrame(train_bow.toarray(), columns=vectorizer.get_feature_names()).to_csv(
-        "preprocessed_data/train_bow.csv"
+        "preprocessed_data/train_bow.csv", sep="\t"
     )
 
     test_bow = vectorizer.transform(test)
     DataFrame(test_bow.toarray(), columns=vectorizer.get_feature_names()).to_csv(
-        "preprocessed_data/test_bow.csv"
+        "preprocessed_data/test_bow.csv", sep="\t"
     )
 
 
@@ -154,10 +155,26 @@ def tf_idf(train, test=None):
     vectorizer = TfidfVectorizer()
     train_tfidf = vectorizer.fit_transform(train)
     DataFrame(train_tfidf.toarray(), columns=vectorizer.get_feature_names()).to_csv(
-        "preprocessed_data/train_tfidf.csv"
+        "preprocessed_data/train_tfidf.csv", sep="\t"
     )
 
     test_tfidf = vectorizer.transform(test)
     DataFrame(test_tfidf.toarray(), columns=vectorizer.get_feature_names()).to_csv(
-        "preprocessed_data/test_tfidf.csv"
+        "preprocessed_data/test_tfidf.csv", sep="\t"
     )
+
+
+def word_vector(train):
+    """
+    converts words to corresponding vectors using gensim's Word2Vec model
+    train: data used to train Word2Vec model
+    """
+    # removing extra spaces
+    train = train.str.replace(r"[^\w\s]", "")
+    # removing digits
+    train = train.apply(lambda x: " ".join(x for x in x.split() if not x.isdigit()))
+    sentence_list = [list(item.split(" ")) for item in train]
+    word2vec_model = Word2Vec(sentence_list, min_count=1, size=300, workers=2)
+    # saving the model
+    word2vec_model.save("word2vec.model")
+    word2vec_model.save("word2vec.bin")
