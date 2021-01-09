@@ -82,6 +82,18 @@ if __name__ == "__main__":
     train.dropna(inplace=True)
     test.dropna(inplace=True)
 
+    # removing extra spaces
+    train["product_description"] = train.str.replace(r"[^\w\s]", "")
+    test["product_description"] = test.str.replace(r"[^\w\s]", "")
+
+    # removing digits
+    train["product_description"] = train.apply(
+        lambda x: " ".join(x for x in x.split() if not x.isdigit())
+    )
+    test["product_description"] = test.apply(
+        lambda x: " ".join(x for x in x.split() if not x.isdigit())
+    )
+
     # create bag of words
     utils.bag_of_words(train["product_description"], test=test["product_description"])
     print("BOW done")
@@ -91,5 +103,8 @@ if __name__ == "__main__":
     print("TFIDF done")
 
     # create word2vec
-    utils.word_vector(train["product_description"])
+    utils.word_vector(train["product_description"], test["product_description"])
     print("Word2Vec done")
+
+    utils.glove_embeddings(train["product_description"], test["product_description"])
+    print("Glove done")

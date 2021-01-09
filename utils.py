@@ -2,12 +2,14 @@ import os
 from zipfile import ZipFile
 
 from bs4 import BeautifulSoup
-from gensim.models import Word2Vec
+from gensim.models import Word2Vec, KeyedVectors
+from gensim.scripts.glove2word2vec import glove2word2vec
 from nltk import download as nltk_download
 from nltk import pos_tag as nltk_pos_tag
 from nltk.corpus import stopwords, wordnet
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
+import numpy as np
 from pandas import DataFrame
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 
@@ -137,12 +139,12 @@ def bag_of_words(train, test=None):
     vectorizer = CountVectorizer()
     train_bow = vectorizer.fit_transform(train)
     DataFrame(train_bow.toarray(), columns=vectorizer.get_feature_names()).to_csv(
-        "preprocessed_data/train_bow.csv", sep="\t"
+        "preprocessed_data/train_bow.tsv", sep="\t"
     )
 
     test_bow = vectorizer.transform(test)
     DataFrame(test_bow.toarray(), columns=vectorizer.get_feature_names()).to_csv(
-        "preprocessed_data/test_bow.csv", sep="\t"
+        "preprocessed_data/test_bow.tsv", sep="\t"
     )
 
 
@@ -155,26 +157,99 @@ def tf_idf(train, test=None):
     vectorizer = TfidfVectorizer()
     train_tfidf = vectorizer.fit_transform(train)
     DataFrame(train_tfidf.toarray(), columns=vectorizer.get_feature_names()).to_csv(
-        "preprocessed_data/train_tfidf.csv", sep="\t"
+        "preprocessed_data/train_tfidf.tsv", sep="\t"
     )
 
     test_tfidf = vectorizer.transform(test)
     DataFrame(test_tfidf.toarray(), columns=vectorizer.get_feature_names()).to_csv(
-        "preprocessed_data/test_tfidf.csv", sep="\t"
+        "preprocessed_data/test_tfidf.tsv", sep="\t"
     )
 
 
-def word_vector(train):
+def word_vector(train, test=None):
     """
-    converts words to corresponding vectors using gensim's Word2Vec model
+    Converts words to corresponding vectors using gensim's Word2Vec model
     train: data used to train Word2Vec model
     """
-    # removing extra spaces
-    train = train.str.replace(r"[^\w\s]", "")
-    # removing digits
-    train = train.apply(lambda x: " ".join(x for x in x.split() if not x.isdigit()))
     sentence_list = [list(item.split(" ")) for item in train]
     word2vec_model = Word2Vec(sentence_list, min_count=1, size=300, workers=2)
+
     # saving the model
     word2vec_model.save("word2vec.model")
     word2vec_model.save("word2vec.bin")
+
+    train = train.str.split()
+    test = test.str.split()
+    train_embeddings = get_word2vec_embeddings(word2vec_model, train)
+    DataFrame(np.asarray(train_embeddings)).to_csv(
+        "preprocessed_data/train_w2v.tsv", sep="\t"
+    )
+    test_embeddings = get_word2vec_embeddings(word2vec_model, test)
+    DataFrame(np.asarray(test_embeddings)).to_csv(
+        "preprocessed_data/test_w2v.tsv", sep="\t"
+    )
+
+
+def glove_embeddings(train, test=None):
+    """
+    Converts words to corresponding vectors using GloVe pre-trained word embeddings
+    train: data used to train Word2Vec model
+    """
+    GLOVE_DIR = "D:\Machine Learning\glove.6B"
+    glove_filename = "glove.6B.300d.txt"
+    glove_file_path = os.path.join(GLOVE_DIR, glove_filename)
+    glove_output_file = "glove_embeddings.txt"
+    glove2word2vec(glove_file_path, glove_output_file)
+
+    # load the Stanford GloVe model
+    glove_model = KeyedVectors.load_word2vec_format(glove_output_file, binary=False)
+
+    train = train.str.split()
+    test = test.str.split()
+    train_embeddings = get_word2vec_embeddings(glove_model, train)
+    DataFrame(np.asarray(train_embeddings)).to_csv(
+        "preprocessed_data/train_glove.tsv", sep="\t"
+    )
+
+    test_embeddings = get_word2vec_embeddings(glove_model, test)
+    DataFrame(np.asarray(test_embeddings)).to_csv(
+        "preprocessed_data/test_glove.tsv", sep="\t"
+    )
+
+
+def get_average_word2vec(tokens_list, vector, generate_missing=False, k=300):
+    """
+    Returns the average vector for the words in the token_list
+    token_list: list of words
+    vector: model to be used for converting word to vec
+    generate_missing: bool for generating the average vec for words not present in the model vocabulary
+    k: vector dimension
+    """
+    if len(tokens_list) < 1:
+        return np.zeros(k)
+    if generate_missing:
+        vectorized = [
+            vector[word] if word in vector else np.random.rand(k)
+            for word in tokens_list
+        ]
+    else:
+        vectorized = [
+            vector[word] if word in vector else np.zeros(k) for word in tokens_list
+        ]
+    length = len(vectorized)
+    summed = np.sum(vectorized, axis=0)
+    averaged = np.divide(summed, length)
+    return averaged
+
+
+def get_word2vec_embeddings(vectors, df, generate_missing=False):
+    """
+    Returns a list of word to vec embeddings with average value for the vectors
+    vectors: model to be used for converting word to vec
+    df: Dataframe on which the embedding is to be applied
+    generate_missing: bool for generating the average vec for words not present in the model vocabulary
+    """
+    embeddings = df.apply(
+        lambda x: get_average_word2vec(x, vectors, generate_missing=generate_missing)
+    )
+    return list(embeddings)
