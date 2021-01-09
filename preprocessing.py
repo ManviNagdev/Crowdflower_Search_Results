@@ -106,5 +106,10 @@ if __name__ == "__main__":
     utils.word_vector(train["product_description"], test["product_description"])
     print("Word2Vec done")
 
+    # create vec using Glove embeddings
     utils.glove_embeddings(train["product_description"], test["product_description"])
     print("Glove done")
+
+    # create vec using fasttext
+    utils.fasttext_embeddings(train["product_description"], test["product_description"])
+    print("Fasttext done")

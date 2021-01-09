@@ -2,6 +2,7 @@ import os
 from zipfile import ZipFile
 
 from bs4 import BeautifulSoup
+import fasttext
 from gensim.models import Word2Vec, KeyedVectors
 from gensim.scripts.glove2word2vec import glove2word2vec
 from nltk import download as nltk_download
@@ -170,6 +171,7 @@ def word_vector(train, test=None):
     """
     Converts words to corresponding vectors using gensim's Word2Vec model
     train: data used to train Word2Vec model
+    test: testing data to be tranformed
     """
     sentence_list = [list(item.split(" ")) for item in train]
     word2vec_model = Word2Vec(sentence_list, min_count=1, size=300, workers=2)
@@ -193,7 +195,8 @@ def word_vector(train, test=None):
 def glove_embeddings(train, test=None):
     """
     Converts words to corresponding vectors using GloVe pre-trained word embeddings
-    train: data used to train Word2Vec model
+    train: training data to be tranformed
+    test: testing data to be tranformed
     """
     GLOVE_DIR = "D:\Machine Learning\glove.6B"
     glove_filename = "glove.6B.300d.txt"
@@ -214,6 +217,31 @@ def glove_embeddings(train, test=None):
     test_embeddings = get_word2vec_embeddings(glove_model, test)
     DataFrame(np.asarray(test_embeddings)).to_csv(
         "preprocessed_data/test_glove.tsv", sep="\t"
+    )
+
+
+def fasttext_embeddings(train, test=None):
+    """
+    Converts words to corresponding vectors using fasttext word embeddings
+    train: data used to train fasttext model
+    test: testing data to be tranformed
+    """
+    # create input file for training fasttext model
+    DataFrame(train).to_csv("preprocessed_data/fasttext_input.tsv", sep="\t")
+    fasttext_model = fasttext.train_unsupervised(
+        "preprocessed_data/fasttext_input.tsv", model="skipgram", minCount=1, dim=300
+    )
+    # saving the model
+    fasttext_model.save_model("fasttext_model.bin")
+    train = train.str.split()
+    test = test.str.split()
+    train_embeddings = get_word2vec_embeddings(fasttext_model, train)
+    DataFrame(np.asarray(train_embeddings)).to_csv(
+        "preprocessed_data/train_fasttext.tsv", sep="\t"
+    )
+    test_embeddings = get_word2vec_embeddings(fasttext_model, test)
+    DataFrame(np.asarray(test_embeddings)).to_csv(
+        "preprocessed_data/test_fasttext.tsv", sep="\t"
     )
 
 
