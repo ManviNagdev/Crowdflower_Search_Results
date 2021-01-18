@@ -77,7 +77,7 @@ def html2text(html_text):
     Returns text after removing html formatting tags
     html_text: text along with HTML formatting tags
     """
-    return BeautifulSoup(html_text, "html.parser", store_line_numbers=False).get_text()
+    return BeautifulSoup(html_text, "lxml").text
 
 
 def remove_stopwords_without_tokenize(text):
@@ -167,36 +167,42 @@ def tf_idf(train, test=None):
     )
 
 
-def word_vector(train, test=None):
+def word_vector(train, test=None, features=[]):
     """
     Converts words to corresponding vectors using gensim's Word2Vec model
     train: data used to train Word2Vec model
     test: testing data to be tranformed
+    features: list of columns to be vectorized
     """
-    sentence_list = [list(item.split(" ")) for item in train]
+    sentence_list = []
+    for feature in features:
+        for item in train[feature]:
+            sentence_list.append(list(item.split(" ")))
+
     word2vec_model = Word2Vec(sentence_list, min_count=1, size=300, workers=2)
 
     # saving the model
     word2vec_model.save("word2vec.model")
     word2vec_model.save("word2vec.bin")
 
-    train = train.str.split()
-    test = test.str.split()
-    train_embeddings = get_word2vec_embeddings(word2vec_model, train)
-    DataFrame(np.asarray(train_embeddings)).to_csv(
-        "preprocessed_data/train_w2v.tsv", sep="\t"
-    )
-    test_embeddings = get_word2vec_embeddings(word2vec_model, test)
-    DataFrame(np.asarray(test_embeddings)).to_csv(
-        "preprocessed_data/test_w2v.tsv", sep="\t"
-    )
+    for feature in features:
+        train[feature] = train[feature].str.split()
+        test[feature] = test[feature].str.split()
+        train_embeddings = get_word2vec_embeddings(word2vec_model, train[feature])
+        train[feature] = np.array(train_embeddings).tolist()
+        test_embeddings = get_word2vec_embeddings(word2vec_model, test[feature])
+        test[feature] = np.asarray(test_embeddings).tolist()
+
+    train.to_csv("preprocessed_data/train_w2v.tsv", sep="\t")
+    test.to_csv("preprocessed_data/test_w2v.tsv", sep="\t")
 
 
-def glove_embeddings(train, test=None):
+def glove_embeddings(train, test=None, features=[]):
     """
     Converts words to corresponding vectors using GloVe pre-trained word embeddings
     train: training data to be tranformed
     test: testing data to be tranformed
+    features: list of columns to be vectorized
     """
     GLOVE_DIR = "D:\Machine Learning\glove.6B"
     glove_filename = "glove.6B.300d.txt"
@@ -207,42 +213,47 @@ def glove_embeddings(train, test=None):
     # load the Stanford GloVe model
     glove_model = KeyedVectors.load_word2vec_format(glove_output_file, binary=False)
 
-    train = train.str.split()
-    test = test.str.split()
-    train_embeddings = get_word2vec_embeddings(glove_model, train)
-    DataFrame(np.asarray(train_embeddings)).to_csv(
-        "preprocessed_data/train_glove.tsv", sep="\t"
-    )
+    for feature in features:
+        train[feature] = train[feature].str.split()
+        test[feature] = test[feature].str.split()
+        train_embeddings = get_word2vec_embeddings(glove_model, train[feature])
+        train[feature] = np.array(train_embeddings).tolist()
+        test_embeddings = get_word2vec_embeddings(glove_model, test[feature])
+        test[feature] = np.asarray(test_embeddings).tolist()
 
-    test_embeddings = get_word2vec_embeddings(glove_model, test)
-    DataFrame(np.asarray(test_embeddings)).to_csv(
-        "preprocessed_data/test_glove.tsv", sep="\t"
-    )
+    train.to_csv("preprocessed_data/train_glove.tsv", sep="\t")
+    test.to_csv("preprocessed_data/test_glove.tsv", sep="\t")
 
 
-def fasttext_embeddings(train, test=None):
+def fasttext_embeddings(train, test=None, features=[]):
     """
     Converts words to corresponding vectors using fasttext word embeddings
     train: data used to train fasttext model
     test: testing data to be tranformed
+    features: list of columns to be vectorized
     """
+
+    sentence_list = []
+    for feature in features:
+        for item in train[feature]:
+            sentence_list.append(list(item.split(" ")))
     # create input file for training fasttext model
-    DataFrame(train).to_csv("preprocessed_data/fasttext_input.tsv", sep="\t")
+    DataFrame(sentence_list).to_csv("preprocessed_data/fasttext_input.tsv", sep="\t")
     fasttext_model = fasttext.train_unsupervised(
         "preprocessed_data/fasttext_input.tsv", model="skipgram", minCount=1, dim=300
     )
     # saving the model
     fasttext_model.save_model("fasttext_model.bin")
-    train = train.str.split()
-    test = test.str.split()
-    train_embeddings = get_word2vec_embeddings(fasttext_model, train)
-    DataFrame(np.asarray(train_embeddings)).to_csv(
-        "preprocessed_data/train_fasttext.tsv", sep="\t"
-    )
-    test_embeddings = get_word2vec_embeddings(fasttext_model, test)
-    DataFrame(np.asarray(test_embeddings)).to_csv(
-        "preprocessed_data/test_fasttext.tsv", sep="\t"
-    )
+    for feature in features:
+        train[feature] = train[feature].str.split()
+        test[feature] = test[feature].str.split()
+        train_embeddings = get_word2vec_embeddings(fasttext_model, train[feature])
+        train[feature] = np.array(train_embeddings).tolist()
+        test_embeddings = get_word2vec_embeddings(fasttext_model, test[feature])
+        test[feature] = np.asarray(test_embeddings).tolist()
+
+    train.to_csv("preprocessed_data/train_fasttext.tsv", sep="\t")
+    test.to_csv("preprocessed_data/test_fasttext.tsv", sep="\t")
 
 
 def get_average_word2vec(tokens_list, vector, generate_missing=False, k=300):
