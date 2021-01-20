@@ -11,8 +11,28 @@ from nltk.corpus import stopwords, wordnet
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
 import numpy as np
-from pandas import DataFrame
+import pandas as pd
+from sklearn.ensemble import (
+    AdaBoostClassifier,
+    ExtraTreesClassifier,
+    GradientBoostingClassifier,
+    RandomForestClassifier,
+)
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+from sklearn.gaussian_process import GaussianProcessClassifier
+from sklearn.linear_model import (
+    LogisticRegression,
+    Perceptron,
+    RidgeClassifier,
+    SGDClassifier,
+)
+from sklearn.metrics import matthews_corrcoef
+from sklearn.model_selection import train_test_split
+from sklearn.naive_bayes import GaussianNB
+from sklearn.neighbors import KNeighborsClassifier, RadiusNeighborsClassifier
+from sklearn.neural_network import MLPClassifier
+from sklearn.svm import SVC
+from sklearn.tree import DecisionTreeClassifier
 
 nltk_download("punkt")
 nltk_download("wordnet")
@@ -139,12 +159,12 @@ def bag_of_words(train, test=None):
     """
     vectorizer = CountVectorizer()
     train_bow = vectorizer.fit_transform(train)
-    DataFrame(train_bow.toarray(), columns=vectorizer.get_feature_names()).to_csv(
+    pd.DataFrame(train_bow.toarray(), columns=vectorizer.get_feature_names()).to_csv(
         "preprocessed_data/train_bow.tsv", sep="\t"
     )
 
     test_bow = vectorizer.transform(test)
-    DataFrame(test_bow.toarray(), columns=vectorizer.get_feature_names()).to_csv(
+    pd.DataFrame(test_bow.toarray(), columns=vectorizer.get_feature_names()).to_csv(
         "preprocessed_data/test_bow.tsv", sep="\t"
     )
 
@@ -157,12 +177,12 @@ def tf_idf(train, test=None):
     """
     vectorizer = TfidfVectorizer()
     train_tfidf = vectorizer.fit_transform(train)
-    DataFrame(train_tfidf.toarray(), columns=vectorizer.get_feature_names()).to_csv(
+    pd.DataFrame(train_tfidf.toarray(), columns=vectorizer.get_feature_names()).to_csv(
         "preprocessed_data/train_tfidf.tsv", sep="\t"
     )
 
     test_tfidf = vectorizer.transform(test)
-    DataFrame(test_tfidf.toarray(), columns=vectorizer.get_feature_names()).to_csv(
+    pd.DataFrame(test_tfidf.toarray(), columns=vectorizer.get_feature_names()).to_csv(
         "preprocessed_data/test_tfidf.tsv", sep="\t"
     )
 
@@ -184,17 +204,23 @@ def word_vector(train, test=None, features=[]):
     # saving the model
     word2vec_model.save("word2vec.model")
     word2vec_model.save("word2vec.bin")
-
+    df_train = [train]
+    df_test = [test]
     for feature in features:
         train[feature] = train[feature].str.split()
         test[feature] = test[feature].str.split()
         train_embeddings = get_word2vec_embeddings(word2vec_model, train[feature])
-        train[feature] = np.array(train_embeddings).tolist()
+        df_train.append(pd.DataFrame(np.asarray(train_embeddings)))
+        # train[feature] = np.array(train_embeddings).tolist()
         test_embeddings = get_word2vec_embeddings(word2vec_model, test[feature])
-        test[feature] = np.asarray(test_embeddings).tolist()
+        df_test.append(pd.DataFrame(np.asarray(test_embeddings)))
+        # test[feature] = np.asarray(test_embeddings).tolist()
 
-    train.to_csv("preprocessed_data/train_w2v.tsv", sep="\t")
-    test.to_csv("preprocessed_data/test_w2v.tsv", sep="\t")
+    train_final = pd.concat(df_train, axis=1)
+    test_final = pd.concat(df_test, axis=1)
+
+    train_final.to_csv("preprocessed_data/train_w2v.tsv", sep="\t")
+    test_final.to_csv("preprocessed_data/test_w2v.tsv", sep="\t")
 
 
 def glove_embeddings(train, test=None, features=[]):
@@ -238,7 +264,7 @@ def fasttext_embeddings(train, test=None, features=[]):
         for item in train[feature]:
             sentence_list.append(list(item.split(" ")))
     # create input file for training fasttext model
-    DataFrame(sentence_list).to_csv("preprocessed_data/fasttext_input.tsv", sep="\t")
+    pd.DataFrame(sentence_list).to_csv("preprocessed_data/fasttext_input.tsv", sep="\t")
     fasttext_model = fasttext.train_unsupervised(
         "preprocessed_data/fasttext_input.tsv", model="skipgram", minCount=1, dim=300
     )
@@ -285,10 +311,60 @@ def get_word2vec_embeddings(vectors, df, generate_missing=False):
     """
     Returns a list of word to vec embeddings with average value for the vectors
     vectors: model to be used for converting word to vec
-    df: Dataframe on which the embedding is to be applied
+    df: pd.DataFrame on which the embedding is to be applied
     generate_missing: bool for generating the average vec for words not present in the model vocabulary
     """
     embeddings = df.apply(
         lambda x: get_average_word2vec(x, vectors, generate_missing=generate_missing)
     )
     return list(embeddings)
+
+
+def training_testing_split(filepath, label, drop_features=[]):
+    """
+    Performs the train_test_split on the tsv file specified
+    filepath: file location
+    label: column name which specifies the label to be predicted
+    drop_features: columns not to be considered while training
+    """
+    train = pd.read_csv(filepath, sep="\t")
+    filename = os.path.splitext(os.path.basename(filepath))[0]
+
+    y = train[label]
+    train = train.drop(drop_features, axis=1)
+
+    X_train, X_test, y_train, y_test = train_test_split(
+        train, y, test_size=0.33, random_state=42
+    )
+
+    train_final = pd.concat(
+        [
+            pd.DataFrame(np.asarray(X_train)),
+            pd.DataFrame({"label": np.asarray(y_train)}),
+        ],
+        axis=1,
+    )
+    train_final.to_csv("preprocessed_data/train_split_" + filename + ".tsv", sep="\t")
+
+    test_final = pd.concat(
+        [
+            pd.DataFrame(np.asarray(X_test)),
+            pd.DataFrame({"label": np.asarray(y_test)}),
+        ],
+        axis=1,
+    )
+    test_final.to_csv("preprocessed_data/test_split_" + filename + ".tsv", sep="\t")
+
+
+def model_training(X_train, X_test, y_train, y_test, model):
+    """
+    returns MCC score after training the specified model
+    X_train: dataframe for training data
+    y_train: class label for the X_train
+    X_test: dataframe for testing data
+    y_test: class label for the X_test
+    model: model that is to be trained
+    """
+    model.fit(X_train, y_train)
+    y_pred = model.predict(X_test)
+    return matthews_corrcoef(y_test, y_pred)

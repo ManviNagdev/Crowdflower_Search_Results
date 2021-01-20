@@ -120,6 +120,20 @@ if __name__ == "__main__":
 
     # create word2vec
     utils.word_vector(train, test=test, features=["product_description", "query"])
+    utils.training_testing_split(
+        "preprocessed_data/train_w2v.tsv",
+        "median_relevance",
+        drop_features=[
+            "Unnamed: 0",
+            "Unnamed: 0.1",
+            "id",
+            "product_title",
+            "relevance_variance",
+            "median_relevance",
+            "query",
+            "product_description",
+        ],
+    )
     print("Word2Vec done")
 
     # create vec using Glove embeddings
