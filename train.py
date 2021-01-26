@@ -10,6 +10,7 @@ from sklearn.ensemble import (
 )
 from sklearn.gaussian_process import GaussianProcessClassifier
 from sklearn.linear_model import (
+    LinearRegression,
     LogisticRegression,
     Perceptron,
     RidgeClassifier,
@@ -27,6 +28,7 @@ import utils
 if __name__ == "__main__":
     trainfile = sys.argv[1]
     testfile = sys.argv[2]
+
     X_train = pd.read_csv(trainfile, sep="\t")
     X_test = pd.read_csv(testfile, sep="\t")
 
@@ -58,6 +60,8 @@ if __name__ == "__main__":
 
     mcc = {}
     for name, model in models.items():
-        mcc[name] = utils.model_training(X_train, X_test, y_train, y_test, model)
-
+        try:
+            mcc[name] = utils.model_training(X_train, X_test, y_train, y_test, model)
+        except Exception:
+            continue
     print(mcc)

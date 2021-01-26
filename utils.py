@@ -211,10 +211,8 @@ def word_vector(train, test=None, features=[]):
         test[feature] = test[feature].str.split()
         train_embeddings = get_word2vec_embeddings(word2vec_model, train[feature])
         df_train.append(pd.DataFrame(np.asarray(train_embeddings)))
-        # train[feature] = np.array(train_embeddings).tolist()
         test_embeddings = get_word2vec_embeddings(word2vec_model, test[feature])
         df_test.append(pd.DataFrame(np.asarray(test_embeddings)))
-        # test[feature] = np.asarray(test_embeddings).tolist()
 
     train_final = pd.concat(df_train, axis=1)
     test_final = pd.concat(df_test, axis=1)
@@ -239,16 +237,22 @@ def glove_embeddings(train, test=None, features=[]):
     # load the Stanford GloVe model
     glove_model = KeyedVectors.load_word2vec_format(glove_output_file, binary=False)
 
+    df_train = [train]
+    df_test = [test]
+
     for feature in features:
         train[feature] = train[feature].str.split()
         test[feature] = test[feature].str.split()
         train_embeddings = get_word2vec_embeddings(glove_model, train[feature])
-        train[feature] = np.array(train_embeddings).tolist()
+        df_train.append(pd.DataFrame(np.asarray(train_embeddings)))
         test_embeddings = get_word2vec_embeddings(glove_model, test[feature])
-        test[feature] = np.asarray(test_embeddings).tolist()
+        df_test.append(pd.DataFrame(np.asarray(test_embeddings)))
 
-    train.to_csv("preprocessed_data/train_glove.tsv", sep="\t")
-    test.to_csv("preprocessed_data/test_glove.tsv", sep="\t")
+    train_final = pd.concat(df_train, axis=1)
+    test_final = pd.concat(df_test, axis=1)
+
+    train_final.to_csv("preprocessed_data/train_glove.tsv", sep="\t")
+    test_final.to_csv("preprocessed_data/test_glove.tsv", sep="\t")
 
 
 def fasttext_embeddings(train, test=None, features=[]):
@@ -263,23 +267,30 @@ def fasttext_embeddings(train, test=None, features=[]):
     for feature in features:
         for item in train[feature]:
             sentence_list.append(list(item.split(" ")))
+
     # create input file for training fasttext model
     pd.DataFrame(sentence_list).to_csv("preprocessed_data/fasttext_input.tsv", sep="\t")
     fasttext_model = fasttext.train_unsupervised(
         "preprocessed_data/fasttext_input.tsv", model="skipgram", minCount=1, dim=300
     )
+
     # saving the model
     fasttext_model.save_model("fasttext_model.bin")
+    df_train = [train]
+    df_test = [test]
     for feature in features:
         train[feature] = train[feature].str.split()
         test[feature] = test[feature].str.split()
         train_embeddings = get_word2vec_embeddings(fasttext_model, train[feature])
-        train[feature] = np.array(train_embeddings).tolist()
+        df_train.append(pd.DataFrame(np.asarray(train_embeddings)))
         test_embeddings = get_word2vec_embeddings(fasttext_model, test[feature])
-        test[feature] = np.asarray(test_embeddings).tolist()
+        df_test.append(pd.DataFrame(np.asarray(test_embeddings)))
 
-    train.to_csv("preprocessed_data/train_fasttext.tsv", sep="\t")
-    test.to_csv("preprocessed_data/test_fasttext.tsv", sep="\t")
+    train_final = pd.concat(df_train, axis=1)
+    test_final = pd.concat(df_test, axis=1)
+
+    train_final.to_csv("preprocessed_data/train_fasttext.tsv", sep="\t")
+    test_final.to_csv("preprocessed_data/test_fasttext.tsv", sep="\t")
 
 
 def get_average_word2vec(tokens_list, vector, generate_missing=False, k=300):
